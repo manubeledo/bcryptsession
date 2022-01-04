@@ -1,64 +1,55 @@
 const express = require('express')
-const cookieParser = require('cookie-parser')
 const app = express()
+const path = require('path')
 const session = require('express-session')
+const cookieParser = require('cookie-parser')
 const serverRoutes = require('./routes/routes')
-const routes = require('./routes/routes')
+const MongoStore = require('connect-mongo')
+// const { usersModel : db, usersModel } = require('./config/mongodb') //Importa la base de datos de mongo
 PORT = 3000
 
-app.use(express.urlencoded({ extended: false }))
+const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true }
+app.use('/recursos', express.static(path.join(__dirname+'/public'))) // path join le da la barra invertida que corresponda, se usa /recursos para llamar a los estilos y scripts de public
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
+app.set("view engine", "ejs");
+app.set("views", "./views/layouts");
 
 app.use(cookieParser())
 
-app.use(session({ secret: 'keyboard cat', cookie: { maxAge: 60000 }}))
-
-let contador = 0
+app.use(session({ 
+    store: MongoStore.create({
+        mongoUrl: 'mongodb+srv://manuclusteraws:unpassword@cluster0.eknww.mongodb.net/desafiologin',
+        mongoOptions: advancedOptions
+    }),
+    secret: 'keyboard cat', 
+    resave: true, // if your store sets an expiration date on stored sessions, you use it
+    cookie: { maxAge: 60000 }, // cookie duration in ms
+    saveUninitialized: false
+}))
 
 app.get("/login", (req, res) => {
-
-    if(req.session.user) contador++
-        let name = "GET"
-        res.cookie('cookieName', 'sessionTime', {httpOnly: true, maxAge: 10000}) // maxAge funciona en milisegundos, es el tiempo que va durar la cookie 
-        res.cookie('cookieLogout', 'logoutTime', {httpOnly: true, maxAge: 20000})
-        //res.cookie('sky', 'blue', {httpOnly: true, secure: true}) // Secure solo funciona en https domains (no http)
-        // console.log("cookies", req.cookies) // Sin cookie parser no funciona req.cookies 
-        res.send(`
-        <h1>Hello ${name}<h1>
-        <form action='/login' method=POST>
-        <input type='text' name='name' placeholder='enter your name..'>
-        <button>Submit</button>
-        <h3>Se ha refrescado la pagina ${contador} veces<h3>
-        </form>
-        `)
+    console.log("nombre de req.session.user --->", req.session.user)
+    if(req.session.user){ // entra al if si la session no expiro y renderiza el usuario (dura 60segundos la session)
+        res.render('logedin', {user : req.session.user}) 
+    } else {
+        res.render('login')
+    }
 })
 
 app.post("/login", (req, res) => {
-    let name = 'POST'
-    req.session.user = 'created'
-    if(req.session.user) name = req.body.name.trim()
-    if (req.cookies.cookieName == 'sessionTime'){
-    res.send(`
-        <h1>Bienvenido ${name}\n<a href="/logout">Desloguarse</a><h1>
-            <h1>Ingrese producto</h1>
-            <input type='text' name='name' placeholder='Nombre del producto...'><br><br>
-            <input type='text' name='name' placeholder='Precio...'><br><br>
-            <input type='text' name='name' placeholder='Foto URL..'><br><br>
-            <button>Enviar</button>
-        `)
+    res.cookie('userName', `${req.body.name}`, {httpOnly: true, maxAge: 30000})
+    if (req.cookies.cookieUserName){
+        res.render('logout', { user : req.cookies.cookieUserName })
     } else {
+        req.session.user = req.body.name.trim() // Trim() Delete all spaces in the string
         res.redirect('/login')
     }
 })
 
-app.get("/logout", async (req, res) => {
-        if(req.cookies.cookieLogout == 'logoutTime'){
-            res.send(`
-            <h1>Hasta Luego ${req.session.user}<h1>
-            `)
-        } else {
-            res.send(window.location = 'http://localhost:3000/login')
-        // res.redirect('/login')
-        }
+app.post("/logout", async (req, res) => {
+        console.log('entro por post a /logout')
+        res.render('logout', { user: req.cookies.userName})
 })
 
 serverRoutes(app)

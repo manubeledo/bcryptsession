@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logout</title>
+</head>
+<body>
+    <div class="contenedor" style="max-width:700px; width: 100%; margin: 50px auto 0px;">
+      
+        <h1 style="text-align: center; color: rgb(65, 65, 247)">Hasta luego <%= user %> </h1>
+    
+    </div>
+</body>
+
+<script> 
+    setTimeout(fetchFunction, 120000);
+    function fetchFunction(){
+        window.location.href = 'http://localhost:3000/login'
+    }
+</script>
+</html>
